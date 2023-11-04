@@ -1,42 +1,32 @@
-name: Build Angular Project
-# Controls when the workflow will run
-on:
-  pull_request:
-    paths-ignore:
-      - '**.md'
-  push:
-    branches:
-      - main
-      - releases/*
-    paths-ignore:
-      - '**.md'
-
-env:
-  name: CarlosThompson
-
+on: push
+name: Build Angular
 jobs:
   build:
-    runs-on: [ubuntu-latest, windows-latest, macos-latest]
-    name: Build Project
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x]
+
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with: 
-          node-version: '18.x'
-      - name: install
-        run: npm install
-      - name: build
-        run: npm run build
-      - name: deploy
-        uses: demurgos/ga-deploy-git@v1
+      - uses: actions/checkout@v4
+
+      - name: Cache node modules
+        uses: actions/cache@v4
         with:
-          accessToken: ${{ secrets.TOKEN }}
-          srcDir: build
-          destBranch: gh-pages
-             
-  dump:
-    runs-on: [ubuntu-latest, windows-latest, macos-latest]
-    steps:
-      - env:
-         GITHUB_CONTEXT: ${{ toJson(github) }}
-        run: echo "$GITHUB_CONTEXT"
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+      - name: Node ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: npm install and npm run build
+        run: |
+          npm i
+          npm run build:prod
+      - name: Push Build to Releases
+        uses: ncipollo/release-action@v4
+        with:
+          artifacts: "dist/angular-githubaction/*"
+          token: ${{ secrets.TOKEN }}
