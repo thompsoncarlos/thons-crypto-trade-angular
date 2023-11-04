@@ -1,13 +1,15 @@
 name: Build Angular Project
 # Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "master" branch
-  push:
-    branches: 
-      ["main"]
   pull_request:
-    types: 
-      ["closed"]
+    paths-ignore:
+      - '**.md'
+  push:
+    branches:
+      - main
+      - releases/*
+    paths-ignore:
+      - '**.md'
 
 env:
   name: CarlosThompson
@@ -38,14 +40,3 @@ jobs:
       - env:
          GITHUB_CONTEXT: ${{ toJson(github) }}
         run: echo "$GITHUB_CONTEXT"
-
-  pull_request_only:
-      runs-on: [ubuntu-latest, windows-latest, macos-latest]
-      if: github.event_name == 'pull_request'
-      needs: build
-      steps:
-        - name: Run a multi-line script
-          run: |
-            echo Add other actions to build,
-            echo test, and deploy your project.
-            echo Hi, $name.
