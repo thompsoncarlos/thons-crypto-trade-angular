@@ -1,32 +1,51 @@
-on: push
-name: Build Angular
+name: Build Angular Project
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the "master" branch
+  push:
+    branches: 
+      ["main"]
+  pull_request:
+    types: 
+      ["closed"]
+
+env:
+  name: CarlosThompson
+
 jobs:
   build:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [18.x]
-
+    runs-on: [ubuntu-latest, windows-latest, macos-latest]
+    name: Build Project
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with: 
+          node-version: '18.x'
+      - name: install
+        run: npm install
+      - name: build
+        run: npm run build
+      - name: deploy
+        uses: demurgos/ga-deploy-git@v1
+        with:
+          accessToken: ${{ secrets.TOKEN }}
+          srcDir: build
+          destBranch: gh-pages
+             
+  dump:
+    runs-on: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - env:
+         GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$GITHUB_CONTEXT"
 
-      - name: Cache node modules
-        uses: actions/cache@v1
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-      - name: Node ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
-        with:
-          node-version: ${{ matrix.node-version }}
-      - name: npm install and npm run build
-        run: |
-          npm i
-          npm run build:prod
-      - name: Push Build to Releases
-        uses: ncipollo/release-action@v1
-        with:
-          artifacts: "dist/angular-githubaction/*"
-          token: ${{ secrets.TOKEN }}
+  pull_request_only:
+      runs-on: [ubuntu-latest, windows-latest, macos-latest]
+      if: github.event_name == 'pull_request'
+      needs: build
+      steps:
+        - name: Run a multi-line script
+          run: |
+            echo Add other actions to build,
+            echo test, and deploy your project.
+            echo Hi, $name.
